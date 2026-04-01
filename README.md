@@ -11,13 +11,13 @@ Built in Rust with a TUI powered by [ratatui](https://ratatui.rs). Scans lockfil
 **Linux (x86_64):**
 
 ```bash
-curl -fsSL https://github.com/sevsev9/axios-incident-check-rs/releases/latest/download/axios-incident-check-rs-x86_64-unknown-linux-gnu.tar.gz | tar xz && ./axios-incident-check-rs
+curl -fsSL https://github.com/sevsev9/axios-incident-check-rs/releases/latest/download/axios-incident-check-rs-x86_64-unknown-linux-musl.tar.gz | tar xz && ./axios-incident-check-rs
 ```
 
 **Linux (aarch64):**
 
 ```bash
-curl -fsSL https://github.com/sevsev9/axios-incident-check-rs/releases/latest/download/axios-incident-check-rs-aarch64-unknown-linux-gnu.tar.gz | tar xz && ./axios-incident-check-rs
+curl -fsSL https://github.com/sevsev9/axios-incident-check-rs/releases/latest/download/axios-incident-check-rs-aarch64-unknown-linux-musl.tar.gz | tar xz && ./axios-incident-check-rs
 ```
 
 **macOS (Apple Silicon):**
