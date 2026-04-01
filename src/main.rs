@@ -408,10 +408,10 @@ fn shellexpand(s: &str) -> String {
         if let Some(home) = std::env::var_os("HOME") {
             return format!("{}/{rest}", home.to_string_lossy());
         }
-    } else if s == "~" {
-        if let Some(home) = std::env::var_os("HOME") {
-            return home.to_string_lossy().into_owned();
-        }
+    } else if s == "~"
+        && let Some(home) = std::env::var_os("HOME")
+    {
+        return home.to_string_lossy().into_owned();
     }
     s.to_string()
 }
@@ -766,7 +766,7 @@ fn scan_lockfiles(roots: Vec<PathBuf>, tx: mpsc::Sender<ScanEvent>) -> Result<()
         let visited_cloned = visited.clone();
         let seen_dirs_cloned = seen_dirs.clone();
         let walk_errors_cloned = walk_errors.clone();
-        let threads = num_cpus::get().max(2).min(32);
+        let threads = num_cpus::get().clamp(2, 32);
 
         WalkBuilder::new(root)
             .hidden(false)
@@ -814,26 +814,26 @@ fn scan_lockfiles(roots: Vec<PathBuf>, tx: mpsc::Sender<ScanEvent>) -> Result<()
                     }
 
                     let now = visited.fetch_add(1, Ordering::Relaxed) + 1;
-                    if now % 25 == 0 {
+                    if now.is_multiple_of(25) {
                         send_blocking(&tx, ScanEvent::Visited(SectionKind::Lockfiles, now));
                     }
 
-                    if let Ok(contents) = fs::read_to_string(path) {
-                        if contains_bad_axios(&contents) || contains_suspicious_dep(&contents) {
-                            // Deduplicate by parent directory
-                            let dir = path.parent().unwrap_or(path).to_path_buf();
-                            if seen_dirs.insert(dir) {
-                                send_blocking(
-                                    &tx,
-                                    ScanEvent::Finding(
-                                        SectionKind::Lockfiles,
-                                        Finding::new(
-                                            Severity::Medium,
-                                            format!("Affected dependency reference found in {}", path.display()),
-                                        ),
+                    if let Ok(contents) = fs::read_to_string(path)
+                        && (contains_bad_axios(&contents) || contains_suspicious_dep(&contents))
+                    {
+                        // Deduplicate by parent directory
+                        let dir = path.parent().unwrap_or(path).to_path_buf();
+                        if seen_dirs.insert(dir) {
+                            send_blocking(
+                                &tx,
+                                ScanEvent::Finding(
+                                    SectionKind::Lockfiles,
+                                    Finding::new(
+                                        Severity::Medium,
+                                        format!("Affected dependency reference found in {}", path.display()),
                                     ),
-                                );
-                            }
+                                ),
+                            );
                         }
                     }
 
@@ -870,7 +870,7 @@ fn scan_node_modules(roots: Vec<PathBuf>, tx: mpsc::Sender<ScanEvent>) -> Result
     for root in roots {
         let tx_cloned = tx.clone();
         let visited_cloned = visited.clone();
-        let threads = num_cpus::get().max(2).min(32);
+        let threads = num_cpus::get().clamp(2, 32);
 
         WalkBuilder::new(root)
             .hidden(false)
@@ -895,7 +895,7 @@ fn scan_node_modules(roots: Vec<PathBuf>, tx: mpsc::Sender<ScanEvent>) -> Result
                     }
 
                     let now = visited.fetch_add(1, Ordering::Relaxed) + 1;
-                    if now % 50 == 0 {
+                    if now.is_multiple_of(50) {
                         send_blocking(&tx, ScanEvent::Visited(SectionKind::NodeModules, now));
                     }
 
@@ -1026,7 +1026,7 @@ fn scan_ioc_files(tx: mpsc::Sender<ScanEvent>) -> Result<()> {
             let mut visited = 0_u64;
             for entry in read_dir.flatten() {
                 visited += 1;
-                if visited % 25 == 0 {
+                if visited.is_multiple_of(25) {
                     send_blocking(&tx, ScanEvent::Visited(SectionKind::IocFiles, visited));
                 }
                 let p = entry.path();
@@ -1143,7 +1143,7 @@ fn scan_processes(tx: mpsc::Sender<ScanEvent>) -> Result<()> {
     let mut visited = 0_u64;
     for line in stdout.lines() {
         visited += 1;
-        if visited % 100 == 0 {
+        if visited.is_multiple_of(100) {
             send_blocking(&tx, ScanEvent::Visited(SectionKind::Processes, visited));
         }
 
@@ -1180,7 +1180,7 @@ fn scan_text_file(
     visited: &mut u64,
     severity: Severity,
 ) {
-    if *visited % 25 == 0 {
+    if (*visited).is_multiple_of(25) {
         send_blocking(tx, ScanEvent::Visited(section, *visited));
     }
 
